@@ -11,6 +11,7 @@ echo "       I N S T A L L         S T A R T I N G"
 echo "=================================================================="
 #fix that pesky GB keyboard...requires a reboot at some point to work
 sed -i 's/XKBLAYOUT="gb"/XKBLAYOUT="us"/g' /etc/default/keyboard
+apt-get -y update --fix-missing
 apt-get -y install wget
 
 echo "------------------------------------------------------------------"
