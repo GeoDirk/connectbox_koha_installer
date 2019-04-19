@@ -5,4 +5,4 @@ curl -O https://raw.githubusercontent.com/GeoDirk/connectbox_koha_installer/mast
 
 chmod 755 cb_koha_installer_script.sh
 
-./cb_koha_installer_script.sh
+./cb_koha_installer_script.sh | tee koha_install.log
