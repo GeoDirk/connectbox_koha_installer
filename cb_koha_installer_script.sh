@@ -1,7 +1,8 @@
 #!/bin/bash
+export LANG=en_GB.UTF-8; export LC_ALL=en_GB.UTF-8; export LANGUAGE=en_GB.UTF-8;
 
 function pause(){
-        read -p "$*"
+  read -p "$*"
 }
 
 SECONDS=0
@@ -38,9 +39,22 @@ systemctl disable nginx
 service nginx stop
 
 echo "------------------------------------------------------------------"
+echo "  Disable all those firewall rules"
+echo "------------------------------------------------------------------"
+iptables-save > default_firewall_rules.fw
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -t nat -F
+iptables -t mangle -F
+iptables -F
+iptables -X
+
+echo "------------------------------------------------------------------"
 echo "  install mysql server"
 echo "------------------------------------------------------------------"
-apt-get -y install mysql-server
+#apt-get -y install mysql-server
+apt-get -y install mariadb-server
 
 echo "------------------------------------------------------------------"
 echo " install Apache web server"
@@ -104,6 +118,8 @@ echo "------------------------------------------------------------------"
 echo " update the koha config file"
 echo "------------------------------------------------------------------"
 sed -i 's/INTRAPORT="80"/INTRAPORT="8080"/g' /etc/koha/koha-sites.conf
+ipaddress=$(ifconfig eth0 | grep inet | awk '{ print $2 }' | head -1)
+sed -i 's/DOMAIN=".myDNSname.org"/DOMAIN="$ipaddress"/g' /etc/koha/koha-sites.conf
 
 echo "------------------------------------------------------------------"
 echo " Set up Apache modules"
@@ -142,7 +158,6 @@ duration=$SECONDS
 echo "       elapsed:  $(($duration / 60)) minutes and $(($duration % 60)) seconds"
 echo "=================================================================="
 echo "  Open up a web browser and walk throught the installer"
-ipaddress=ifconfig eth0 | grep inet | awk '{ print $2 }' | head -1
 echo "  http://$ipaddress:8080"
 echo "  Username: $username"
 echo "  Password: $password"
