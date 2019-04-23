@@ -56,6 +56,8 @@ echo "------------------------------------------------------------------"
 echo " Open up port 8080 in the firewall - used for Admin access by KOHA"
 echo "------------------------------------------------------------------"
 iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
+#persist the rule on reboot
+sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/g' /etc/iptables/rules.v4
 
 echo "------------------------------------------------------------------"
 echo "  install mysql server"
@@ -144,6 +146,9 @@ a2dissite 000-default
 #enable mod_deflate that allows output from your server to be compressed
 #  before being sent to the client over the network.
 a2enmod deflate
+#enable module for Koha PLACK
+a2enmod headers proxy_http
+
 
 #add in additional listener in Apache
 sed -i 's/Listen 80/Listen 80\nListen 8080/g' /etc/apache2/ports.conf
@@ -154,6 +159,11 @@ echo "------------------------------------------------------------------"
 koha-create --create-db library
 #enable the libary site in Apache
 a2ensite library
+service apache2 restart
+
+#enable PLACK to speed up the server
+koha-plack --enable library
+koha-plack --start  library
 service apache2 restart
 
 #pull out the koha username
