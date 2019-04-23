@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# set the correct environment for compiling otherwise we get errors.
 export LANG=en_GB.UTF-8; export LC_ALL=en_GB.UTF-8; export LANGUAGE=en_GB.UTF-8;
 
 function pause(){
@@ -38,23 +40,28 @@ echo "------------------------------------------------------------------"
 systemctl disable nginx
 service nginx stop
 
+# echo "------------------------------------------------------------------"
+# echo "  Disable all those firewall rules"
+# echo "------------------------------------------------------------------"
+# iptables-save > default_firewall_rules.fw
+# iptables -P INPUT ACCEPT
+# iptables -P FORWARD ACCEPT
+# iptables -P OUTPUT ACCEPT
+# iptables -t nat -F
+# iptables -t mangle -F
+# iptables -F
+# iptables -X
+
 echo "------------------------------------------------------------------"
-echo "  Disable all those firewall rules"
+echo " Open up port 8080 in the firewall - used for Admin access by KOHA"
 echo "------------------------------------------------------------------"
-iptables-save > default_firewall_rules.fw
-iptables -P INPUT ACCEPT
-iptables -P FORWARD ACCEPT
-iptables -P OUTPUT ACCEPT
-iptables -t nat -F
-iptables -t mangle -F
-iptables -F
-iptables -X
+iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
 
 echo "------------------------------------------------------------------"
 echo "  install mysql server"
 echo "------------------------------------------------------------------"
-#apt-get -y install mysql-server
-apt-get -y install mariadb-server
+apt-get -y install mysql-server
+# apt-get -y install mariadb-server
 
 echo "------------------------------------------------------------------"
 echo " install Apache web server"
@@ -117,7 +124,9 @@ apt-get install koha-common -y
 echo "------------------------------------------------------------------"
 echo " update the koha config file"
 echo "------------------------------------------------------------------"
+# configure the admin port to be 8080
 sed -i 's/INTRAPORT="80"/INTRAPORT="8080"/g' /etc/koha/koha-sites.conf
+# set the domain to be just the ip address of the device
 ipaddress=$(ifconfig eth0 | grep inet | awk '{ print $2 }' | head -1)
 sed -i 's/DOMAIN=".myDNSname.org"/DOMAIN="$ipaddress"/g' /etc/koha/koha-sites.conf
 
