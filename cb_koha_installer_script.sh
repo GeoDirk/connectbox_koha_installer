@@ -58,7 +58,7 @@ echo "------------------------------------------------------------------"
 #admin port
 iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
 #media port
-iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
+iptables -A INPUT -p tcp --dport 8082 --j ACCEPT
 #persist the rule on reboot
 sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/g' /etc/iptables/rules.v4
 sed -i 's/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8082 -j ACCEPT/g' /etc/iptables/rules.v4
