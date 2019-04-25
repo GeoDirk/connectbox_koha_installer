@@ -22,3 +22,7 @@ chmod 755 cb_koha_installer_script.sh
 ./cb_koha_installer_script.sh | tee koha_install.log
 ```
 Sit back and wait an hour or so for the script to run full.  After that, connect using the web to http:\\192.168.88.69:8080 which is the admin port.  Using the new username and password shown at the end of the script, log in and complete the KOHA setup usng the web installer.
+
+You can install eBooks or other media into the /media/usb0 directory or on an external USB stick.  Reference them like in this format from within KOHA:
+
+http://rpi_ip_address:8082/media.pdf
