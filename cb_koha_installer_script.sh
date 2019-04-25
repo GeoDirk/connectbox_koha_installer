@@ -55,9 +55,13 @@ service nginx stop
 echo "------------------------------------------------------------------"
 echo " Open up port 8080 in the firewall - used for Admin access by KOHA"
 echo "------------------------------------------------------------------"
+#admin port
+iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
+#media port
 iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
 #persist the rule on reboot
 sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/g' /etc/iptables/rules.v4
+sed -i 's/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8082 -j ACCEPT/g' /etc/iptables/rules.v4
 
 echo "------------------------------------------------------------------"
 echo "  install mysql server"
@@ -133,6 +137,24 @@ ipaddress=$(ifconfig eth0 | grep inet | awk '{ print $2 }' | head -1)
 sed -i 's/DOMAIN=".myDNSname.org"/DOMAIN="$ipaddress"/g' /etc/koha/koha-sites.conf
 
 echo "------------------------------------------------------------------"
+echo " Add Apache Website for Media on /media/usb0"
+echo "------------------------------------------------------------------"
+
+echo "
+<VirtualHost *:8082>
+	ServerAdmin webmaster@localhost
+	DocumentRoot /media/usb0
+	ErrorLog ${APACHE_LOG_DIR}/error.log
+	CustomLog ${APACHE_LOG_DIR}/access.log combined
+	<Directory />
+		Options Indexes
+		AllowOverride All
+		Require all granted
+		Allow from all
+	</Directory>
+</VirtualHost>" > /etc/apache2/sites-available/usb.conf
+
+echo "------------------------------------------------------------------"
 echo " Set up Apache modules"
 echo "------------------------------------------------------------------"
 #enable mod_rewrite Provides a rule-based rewriting engine to rewrite
@@ -151,7 +173,7 @@ a2enmod headers proxy_http
 
 
 #add in additional listener in Apache
-sed -i 's/Listen 80/Listen 80\nListen 8080/g' /etc/apache2/ports.conf
+sed -i 's/Listen 80/Listen 80\nListen 8080\nListen 8082/g' /etc/apache2/ports.conf
 
 echo "------------------------------------------------------------------"
 echo " Create a KOHA library called 'library'"
@@ -159,6 +181,8 @@ echo "------------------------------------------------------------------"
 koha-create --create-db library
 #enable the libary site in Apache
 a2ensite library
+#enable the media site
+a2ensite usb
 service apache2 restart
 
 #enable PLACK to speed up the server
