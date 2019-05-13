@@ -57,11 +57,8 @@ echo " Open up port 8080 in the firewall - used for Admin access by KOHA"
 echo "------------------------------------------------------------------"
 #admin port
 iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
-#media port
-iptables -A INPUT -p tcp --dport 8082 --j ACCEPT
 #persist the rule on reboot
 sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/g' /etc/iptables/rules.v4
-sed -i 's/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8082 -j ACCEPT/g' /etc/iptables/rules.v4
 
 echo "------------------------------------------------------------------"
 echo "  install mysql server"
@@ -137,22 +134,29 @@ ipaddress=$(ifconfig eth0 | grep inet | awk '{ print $2 }' | head -1)
 sed -i 's/DOMAIN=".myDNSname.org"/DOMAIN="$ipaddress"/g' /etc/koha/koha-sites.conf
 
 echo "------------------------------------------------------------------"
-echo " Add Apache Website for Media on /media/usb0"
+echo " Configure Apache to handle the location block"
+echo " and alias for 'media' on /media/usb0"
 echo "------------------------------------------------------------------"
-
+# allow Apache to access the /media /media/usb0 directory
 echo "
-<VirtualHost *:8082>
-	ServerAdmin webmaster@localhost
-	DocumentRoot /media/usb0
-	ErrorLog ${APACHE_LOG_DIR}/error.log
-	CustomLog ${APACHE_LOG_DIR}/access.log combined
-	<Directory />
-		Options Indexes
-		AllowOverride All
-		Require all granted
-		Allow from all
-	</Directory>
-</VirtualHost>" > /etc/apache2/sites-available/usb.conf
+<Directory /media/usb0/>
+	Options Indexes FollowSymLinks
+	AllowOverride None
+	Require all granted
+</Directory>" >> /etc/apache2/apache2.conf
+
+# create a location block alias that allows redirects to the localhost
+# for the /media/usb0 content
+#
+# KOHA ebook URL references just point to: /media/ebook.pdf and KOHA
+# will expand that out to be the equivalent to http://local_ip_address/media/ebook.pdf where
+# on the device /media/usb0/ebook.pdf is located
+insertStr="  Alias /media /media/usb0
+  <Location '/media'>
+     SetHandler None
+	 Allow from all
+  </Location>"
+sed -i "s/</VirtualHost>/$insertStr\n</VirtualHost>/" /etc/apache2/sites-available/library.conf
 
 echo "------------------------------------------------------------------"
 echo " Set up Apache modules"
@@ -181,8 +185,6 @@ echo "------------------------------------------------------------------"
 koha-create --create-db library
 #enable the libary site in Apache
 a2ensite library
-#enable the media site
-a2ensite usb
 service apache2 restart
 
 #enable PLACK to speed up the server
