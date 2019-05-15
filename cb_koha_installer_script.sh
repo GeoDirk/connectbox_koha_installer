@@ -12,6 +12,8 @@ SECONDS=0
 echo "=================================================================="
 echo "       I N S T A L L         S T A R T I N G"
 echo "=================================================================="
+#enable ssh post reboot
+touch /boot/ssh
 #fix that pesky GB keyboard...requires a reboot at some point to work
 sed -i 's/XKBLAYOUT="gb"/XKBLAYOUT="us"/g' /etc/default/keyboard
 apt-get -y update --fix-missing
@@ -58,7 +60,7 @@ echo "------------------------------------------------------------------"
 #admin port
 iptables -A INPUT -p tcp --dport 8080 --j ACCEPT
 #persist the rule on reboot
-sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/g' /etc/iptables/rules.v4
+sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 8080 -j ACCEPT/' /etc/iptables/rules.v4
 
 echo "------------------------------------------------------------------"
 echo "  install mysql server"
@@ -197,12 +199,26 @@ username=$(xpath -e '/yazgfs/config/user/text()' /etc/koha/sites/library/koha-co
 #pull out the kohan password
 password=$(xpath -e '/yazgfs/config/pass/text()' /etc/koha/sites/library/koha-conf.xml)
 
+echo "------------------------------------------------------------------"
+echo " enable remote MySQL access for root"
+echo "------------------------------------------------------------------"
+#replace the bind address
+sed -i 's/127.0.0.1/0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf
+#mysql port
+iptables -A INPUT -p tcp --dport 3306 --j ACCEPT
+#persist the rule on reboot
+sed -i 's/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT/-A INPUT -p tcp -m tcp --dport 80 -j ACCEPT\n-A INPUT -p tcp -m tcp --dport 3306 -j ACCEPT/' /etc/iptables/rules.v4
+#allow root user remote access - default root password is ''
+mysql -uroot -e "GRANT ALL PRIVILEGES ON *.* TO '$username'@'%' IDENTIFIED BY '$password';"
+mysql -uroot -e "FLUSH PRIVILEGES;"
+systemctl restart mysqld.service  
+
 echo "=================================================================="
 echo "   K O H A    I N S T A L L   S C R I P T    C O M P L E T E D"
 duration=$SECONDS
 echo "       elapsed:  $(($duration / 60)) minutes and $(($duration % 60)) seconds"
 echo "=================================================================="
-echo "  Open up a web browser and walk throught the installer"
+echo "  Open up a web browser and walk through the installer"
 echo "  http://$ipaddress:8080"
 echo "  Username: $username"
 echo "  Password: $password"
